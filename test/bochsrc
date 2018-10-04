@@ -1,0 +1,9 @@
+megs: 256
+display_library: sdl
+romimage: file=/usr/share/bochs/BIOS-bochs-latest
+vgaromimage: file=/usr/share/bochs/VGABIOS-lgpl-latest
+optromimage1: file=build/padded.rom, address=0xD0000
+clock: sync=realtime, time0=local
+cpu: count=1, ips=1000000, reset_on_triple_fault=0
+magic_break: enabled=1
+port_e9_hack: enabled=1
