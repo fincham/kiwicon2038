@@ -1,6 +1,6 @@
 # I don't like Makefiles.
 
-build/chip.rom: $(shell find src)
+build/chip.rom: romify.py $(shell find -name \*.ld) $(shell find src)
 	gcc -std=gnu99 -Os -nostdlib -m32 -march=i386 -ffreestanding -fno-pie -Wl,--nmagic,--script=com.ld -o build/ai.com src/ai.c
 	gcc -DROM -std=gnu99 -Os -nostdlib -m32 -march=i386 -ffreestanding -fno-pie -Wl,--nmagic,--script=rom.ld -o build/ai.rom src/ai.c
 	
