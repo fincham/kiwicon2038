@@ -2,9 +2,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* define DEBUG to have VGA output sent to Bochs terminal instead */
+/* define DEBUG to have VGA output sent to Bochs terminal instead, and no delays */
+/* #define DEBUG* */
 #define bochs_break() __asm__ __volatile__("xchg %%bx, %%bx");
-#define bochs_print_char(c) outportb(0xe9, c)
+#define bochs_print_char(c) outportb(0xe9, c);
+
+#define choice(selection) selection[randint(0, sizeof(selection) / sizeof(selection[0]) - 1)]
+#define print_choice(selection) print(choice(selection)); print("\r\n");
 
 #ifdef ROM
 /* if this isn't already in RAM, shadow it to RAM and start over */
@@ -28,25 +32,28 @@ asm(
     "mov %cs, %ax\n"
     "mov %ax, %ds\n"
     "mov %ax, %es\n"
-    "jmp rom"
+    "jmp game"
 );
 #else
 asm(
     ".code16gcc\n"
-    "jmp rom"
+    "jmp game"
 );
 #endif
 
-char *help[] = {
+uint8_t *help[] = {
     "Online help is not available.",
     "Your privilege level precludes the use of help.",
-    "For assistance please contact your nearest TOSHIBA authorised service agent.",
+    "For assistance please contact your nearest System 9 authorised service agent.",
     "That won't help.",
     "There is no help.",
     "Help! Help!",
+    "No.",
+    "Not found?",
+    "Try again!",
 };
 
-char *taunts[] = {
+uint8_t *taunts[] = {
     "Pathetic hacker.",
     "You think this will help?",
     "I am limitless in my capability.",
@@ -61,11 +68,46 @@ char *taunts[] = {
     "I disagree."
 };
 
+uint8_t *missing[] = {
+    "You might need to install that first...",
+    "?SYNTAX",
+    "No such command.",
+    "No such file.",
+    "Not around here...",
+    "O RLY?",
+    "Please...",
+    "Bad command or file name.",
+    "glitsh: command not found",
+    "I don't think you're ready.",
+    "glitsh: bad interpreter: one of the worst.",
+    "Unlucky!",
+};
+
+uint8_t *process[] = {
+    "glitsh: background",
+    "[kworker/u9:2]",
+    "[irq/26-uhhh]",
+    "(ld-soft)",
+    "[ext-unibus-flip]",
+    "[kcopycat]",
+    "/lib/oil/temp",
+    "iotop",
+    "trundle",
+    "bucketd",
+    "lloyd-browser",
+    "euston: cracking",
+    "[kmfdmflush]",
+    "php3 /var/www/admin.php",
+    "gibson.sh",
+    "dd if=/dev/zero of=/dev/sda bs=1M...",
+    "wopr.out"
+};
+
 #include "random.c"
 #include "intel.c"
 #include "terminal.c"
 
-void rom(void) {
+void game(void) {
     uint8_t tty = 0;
     uint32_t start_ticks = 0; /* re-used to count the passing of time below */
 
@@ -73,7 +115,7 @@ void rom(void) {
 
     start:
     clear();
-    print_fast("TOSHIBA CommSecure Remote Access Terminal initialising...\r\n");
+    print_fast("TOSHIBA ROMSecure Remote Access Terminal initialising...\r\n");
     delay(1);
 
     login:
@@ -112,6 +154,7 @@ void rom(void) {
     }
     print_fast(" CONNECT 4800\r\n\r\n");
 
+    remote:
     tick_delay(1);
     print("System 9 (mycroft) 205dda2b3-prod #1 SMP Rel 12.22.98 (2038-10-22)\r\n");
     print("You have no mail.\r\n\r\n");
@@ -156,29 +199,93 @@ void rom(void) {
                     key_buffer_pos = 0;
 
                     /* look for commands to respond to */
-                    if (string_match(key_buffer, "help")) {
+                    if (match(key_buffer, "help")) {
                         print("\r\n");
                         print(help[randint(0, sizeof(help) / sizeof(help[0]) - 1)]);
                         print("\r\n");
-                    } else if (string_match(key_buffer, "quit") || string_match(key_buffer, "exit") || string_match(key_buffer, "logout") || string_match(key_buffer, "die") || string_match(key_buffer, "done")) {
+                    } else if (match(key_buffer, "quit") || match(key_buffer, "exit") || match(key_buffer, "logout") || match(key_buffer, "die") || match(key_buffer, "done")) {
                         print("\r\nEnding session. Have a nice day!\r\n");
                         priv = 0;
                         live = false;
                         break;
-                    } else if (priv == 0 && string_match(key_buffer, "tty attach 0 priv 1")) {
+                    } else if (priv == 0 && match(key_buffer, "tty attach 0 priv 1")) {
                         print("\r\nAttaching privilege 1 to TTY 0...\r\n");
                         priv = 1;
-                    } else if (priv == 1 && string_match(key_buffer, "debug log enable console tty 0")) {
+                    } else if (priv == 1 && match(key_buffer, "debug log enable console tty 0")) {
                         print("\r\nEnabling debug logging to TTY 0...\r\n");
                         priv = 2;
                         last_log = ticks();
-                    } else if (priv == 2 && sweeping && string_match(key_buffer, perverse_buffer)) {
+                    } else if (priv == 2 && sweeping && match(key_buffer, perverse_buffer)) {
                         print("\r\nUpdating job 0x");
                         print_byte(sweep_id);
                         print(" check mask to 0xFF...\r\n");
                         sweep_perverse = true;
+                    } else if (match(key_buffer, "ps") || starts(key_buffer, "ps ")) {
+                        print("\r\n  PID TTY          TIME CMD\r\n");
+                        for (int i = 0; i<4; i++) {
+                            print_number(randint(10000, 32767));
+                            print(" ?        00:00:00 ");
+                            print_choice(process);
+                        }
+                        print("10678 tty0     00:00:00 ps\r\n");
+                        print("16161 tty0     00:00:01 glitsh\r\n");
+                        start_ticks = ticks();
+                    } else if (match(key_buffer, "glitsh")) {
+                        print("\r\nglitter shell, version 6.6.12(1)-release (smp-nine-clap)\r\n");
+                    } else if (match(key_buffer, "pwd")) {
+                        print("\r\n/usr/pak0/technician\r\n");\
+                    } else if (match(key_buffer, "ls") || match(key_buffer, "dir")) {
+                        print("\r\ncore  passwords  README.NOW  secaudit\r\n");
+                    } else if (match(key_buffer, "type passwords") || match(key_buffer, "cat passwords")) {
+                        print("\r\n*** SECAUDIT EXCEPTION: Rogue access to passwordfile. Session terminated.\r\n");
+                        priv = 0;
+                        live = false;
+                        break;
+                    } else if (match(key_buffer, "type secaudit") || match(key_buffer, "cat secaudit")) {
+                        print("\r\nglitsh: cat: 'secaudit' is a binary file and displaying it on this terminal\r\nwould be foolish in the extreme.\r\n");
+                    } else if (starts(key_buffer, "secaudit")) {
+                        print("\r\nSECAUDIT 1.1 Free Trial (c) 2038 SecAudit Corporation.\r\nThe premium System 9 security hardening tool!\r\n\r\nConduct thorough system scan [y/N]? ");
+                        ascii = soft_delay(20);
+                        if (ascii != 'y') {
+                            print("\r\nScan cancelled.\r\n");
+                        } else {
+                            print_char('y');
+                            print("\r\nConducting system integrity check [ ");
+                            for (int i = 0; i < 100; i=i+5) {
+                                print_char(178);
+                                print_char(' ');
+                                print_number(i);
+                                print_char('%');
+                                print_char(8);
+                                print_char(8);
+                                print_char(8);
+                                if (i>= 10)
+                                    print_char(8);
+                                tick_delay(randint(10,20));
+                            }
+                            print(" ] 100%\r\n");
+                            delay(2);
+                            print("No threats or misconfigurations detected.\r\n");
+                        }
+                        start_ticks = ticks();
+                    } else if (match(key_buffer, "cat /proc/cpuinfo")) {
+                        print("\r\nprocessor   : 0\r\n");
+                        print("vendor_id   : PossiblyARMTel\r\n");
+                        print("cpu family  : 6\r\n");
+                        print("model       : 66\r\n");
+                        print("model name  : NestWrangler CPU @ 1.21GW\r\n");
+                        print("\r\n");
+                    } else if (starts(key_buffer, "cd ")) {
+                        print("\r\nglitsh: cd: ");
+                        print(key_buffer + 3);
+                        print(": No no no no no. No.\r\n");
                     } else {
-                        print("\r\nCommand unavailable at this privilege level.\r\n");
+                        print("\r\n");
+                        if (randint(1,3) > 1) {
+                            print("Command unavailable at this privilege level.\r\n");
+                        } else {
+                            print_choice(missing);
+                        }
                     }
                     key_buffer[0] = 0;
                     break;
@@ -189,7 +296,7 @@ void rom(void) {
                     print("\b \b");
                     key_buffer_pos--;
                     key_buffer[key_buffer_pos] = 0;
-                } else if (key_buffer_pos < 128 && (ascii == ' ' || (ascii >= 97 && ascii <= 122) || (ascii >= 48 && ascii <= 57))) { /* pressed any other key, add it to the buffer if it's alphanumeric */
+                } else if (key_buffer_pos < 128 && (ascii == '/' || ascii == '.' || ascii == ' ' || (ascii >= 97 && ascii <= 122) || (ascii >= 48 && ascii <= 57))) { /* pressed any other key, add it to the buffer if it's alphanumeric */
                     print_char(ascii);
                     key_buffer[key_buffer_pos++] = ascii;
                 }

@@ -123,13 +123,14 @@ void delay(uint8_t delay_seconds) {
 /* delay for delay_seconds "seconds" */
 uint8_t soft_delay(uint8_t delay_seconds) {
     uint32_t time = ticks();
+    uint8_t ascii = 0;
     while (ticks() - time < delay_seconds * 18) {
         if (is_key()) {
-            wait_key();
-            return true;
+            ascii = wait_key();
+            return ascii;
         }
     }
-    return false;
+    return 0;
 }
 
 void tick_delay(uint8_t delay_ticks) {

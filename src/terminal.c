@@ -56,7 +56,11 @@ void print_fast(uint8_t *buffer) {
 }
 
 void print(uint8_t *buffer) {
+    #ifdef DEBUG
+    print_slow(buffer, 0);
+    #else
     print_slow(buffer, 1);
+    #endif
 }
 
 void print_number(uint16_t number) {
@@ -77,17 +81,9 @@ void print_byte(uint16_t number) {
     print(print_buffer);
 }
 
-uint8_t string_match(uint8_t *first, uint8_t *second) {
-    for (size_t i = 0; first[i] != 0 && second[i] != 0; i++) {
-        if (first[i] != second[i])
-            return false;
-    }
-    return true;
-}
-
 void clear() {
     top_left();
-    for (size_t x = 0; x < 80*25; x++) {
+    for (size_t x = 0; x < 80*25 + 79; x++) {
         print_char(' ');
     }
     top_left();
@@ -113,4 +109,35 @@ void screensaver() {
             break;
         }
     }
+}
+
+size_t strlen(uint8_t *string) {
+    size_t length = 0;
+    while(string[length] != 0) {
+        length++;
+    }
+    return length;
+}
+
+/* not really a terminal function but what are you gonna do */
+uint8_t match(uint8_t *first, uint8_t *second) {
+    if(strlen(first) != strlen(second)) {
+        return false;
+    }
+    for (size_t i = 0; first[i] != 0 && second[i] != 0; i++) {
+        if (first[i] != second[i])
+            return false;
+    }
+    return true;
+}
+
+uint8_t starts(uint8_t *first, uint8_t *second) {
+    if(strlen(first) < strlen(second)) {
+        return false;
+    }
+    for (size_t i = 0; first[i] != 0 && second[i] != 0; i++) {
+        if (first[i] != second[i])
+            return false;
+    }
+    return true;
 }
