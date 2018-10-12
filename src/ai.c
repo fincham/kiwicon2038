@@ -3,7 +3,7 @@
 #include <stdbool.h>
 
 /* define DEBUG to have VGA output sent to Bochs terminal instead, and no delays */
-/* #define DEBUG* */
+/* #define DEBUG */
 #define bochs_break() __asm__ __volatile__("xchg %%bx, %%bx");
 #define bochs_print_char(c) outportb(0xe9, c);
 
@@ -263,9 +263,48 @@ void game(void) {
                                     print_char(8);
                                 tick_delay(randint(10,20));
                             }
-                            print(" ] 100%\r\n");
+                            print(" ] 100%\r\n\r\n");
                             delay(2);
-                            print("No threats or misconfigurations detected.\r\n");
+                            print("No serious threats or misconfigurations detected.\r\n");
+                            print_number(randint(100,999));
+                            print(" mild threats detected.\r\n\r\n");
+                            delay(2);
+                            print("Would you like to upgrade to SECAUDIT Pro to find out about\r\nyour mild threats [Y/n]? ");
+                            ascii = soft_delay(20);
+                            if (ascii != 'y' && ascii != 13) {
+                                print("\r\nAre you sure? They're pretty bad threats. Upgrade [Y/n]? ");
+                                ascii = soft_delay(20);
+                                if (ascii != 'y' && ascii != 13) {
+                                    print("\r\nWell! Don't say we didn't warn you.\r\n");
+                                } else {
+                                    goto accept;
+                                }
+                            } else {
+                                accept:
+                                print_char('y');
+                                print("\r\n\r\nBuilding KickChain transaction for payment of ");
+                                print_number(randint(20000, 65535));
+                                print_char('G');
+                                print_char(157); /* yen */
+                                print(" to SECAUDIT CORP... ");
+                                for (int i = 0; i < 10; i++) {
+                                    print_char('/');
+                                    print_char(8);
+                                    tick_delay(5);
+                                    print_char('-');
+                                    print_char(8);
+                                    tick_delay(5);
+                                    print_char('\\');
+                                    print_char(8);
+                                    tick_delay(5);
+                                    print_char('|');
+                                    print_char(8);
+                                    tick_delay(5);
+                                }
+                                print("\r\nInsufficient KickChain funds in Sender Account. Transaction terminated.\r\nTransaction ID:");
+                                print_hex(randint(10024,8192));
+                                print("\r\n");
+                            }
                         }
                         start_ticks = ticks();
                     } else if (match(key_buffer, "cat /proc/cpuinfo")) {
