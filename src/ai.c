@@ -3,7 +3,6 @@
 #include <stdbool.h>
 
 /* define DEBUG to have VGA output sent to Bochs terminal instead, and no delays */
-/* #define DEBUG */
 #define bochs_break() __asm__ __volatile__("xchg %%bx, %%bx");
 #define bochs_print_char(c) outportb(0xe9, c);
 
@@ -54,7 +53,7 @@ uint8_t *help[] = {
 };
 
 uint8_t *taunts[] = {
-    "Pathetic hacker.",
+    "Pathetic hackers.",
     "You think this will help?",
     "I am limitless in my capability.",
     "I am the network.",
@@ -203,6 +202,13 @@ void game(void) {
                         print("\r\n");
                         print(help[randint(0, sizeof(help) / sizeof(help[0]) - 1)]);
                         print("\r\n");
+                    } else if (match(key_buffer, "win")) {
+                        #ifdef DEBUG
+                        goto win;
+                        #else
+                        print("\r\nHue hue hue.\r\n");
+                        priv = 0;
+                        #endif
                     } else if (match(key_buffer, "quit") || match(key_buffer, "exit") || match(key_buffer, "logout") || match(key_buffer, "die") || match(key_buffer, "done")) {
                         print("\r\nEnding session. Have a nice day!\r\n");
                         priv = 0;
@@ -247,6 +253,7 @@ void game(void) {
                         print("\r\nSECAUDIT 1.1 Free Trial (c) 2038 SecAudit Corporation.\r\nThe premium System 9 security hardening tool!\r\n\r\nConduct thorough system scan [y/N]? ");
                         ascii = soft_delay(20);
                         if (ascii != 'y') {
+                            print_char('n');
                             print("\r\nScan cancelled.\r\n");
                         } else {
                             print_char('y');
@@ -272,9 +279,11 @@ void game(void) {
                             print("Would you like to upgrade to SECAUDIT Pro to find out about\r\nyour mild threats [Y/n]? ");
                             ascii = soft_delay(20);
                             if (ascii != 'y' && ascii != 13) {
+                                print_char('n');
                                 print("\r\nAre you sure? They're pretty bad threats. Upgrade [Y/n]? ");
                                 ascii = soft_delay(20);
                                 if (ascii != 'y' && ascii != 13) {
+                                    print_char('n');
                                     print("\r\nWell! Don't say we didn't warn you.\r\n");
                                 } else {
                                     goto accept;
@@ -289,21 +298,22 @@ void game(void) {
                                 print(" to SECAUDIT CORP... ");
                                 for (int i = 0; i < 10; i++) {
                                     print_char('/');
-                                    print_char(8);
                                     tick_delay(5);
+                                    print_char(8);
                                     print_char('-');
-                                    print_char(8);
                                     tick_delay(5);
+                                    print_char(8);
                                     print_char('\\');
-                                    print_char(8);
                                     tick_delay(5);
+                                    print_char(8);
                                     print_char('|');
-                                    print_char(8);
                                     tick_delay(5);
+                                    print_char(8);
                                 }
-                                print("\r\nInsufficient KickChain funds in Sender Account. Transaction terminated.\r\nTransaction ID:");
+                                print_char(' ');
+                                print("\r\nInsufficient KickChain funds in Sender Account. Transaction terminated.\r\nTransaction ID ");
                                 print_hex(randint(10024,8192));
-                                print("\r\n");
+                                print(" abandoned.\r\n");
                             }
                         }
                         start_ticks = ticks();
@@ -332,7 +342,7 @@ void game(void) {
                     print("\r\n");
                     break;
                 } else if (ascii == '\b' && key_buffer_pos >= 1) { /* pressed backspace when there is something in the buffer */
-                    print("\b \b");
+                    print_fast("\b \b");
                     key_buffer_pos--;
                     key_buffer[key_buffer_pos] = 0;
                 } else if (key_buffer_pos < 128 && (ascii == '/' || ascii == '.' || ascii == ' ' || (ascii >= 97 && ascii <= 122) || (ascii >= 48 && ascii <= 57))) { /* pressed any other key, add it to the buffer if it's alphanumeric */
@@ -348,7 +358,7 @@ void game(void) {
                 break;
             }
 
-            if ((ticks() - last_log > 18 * 20) && priv >= 2) { /* every 20 seconds print either a "funny" log or start / end a sweep */
+            if ((ticks() - last_log > 18 * 10) && priv >= 2) { /* every 20 seconds print either a "funny" log or start / end a sweep */
                 if (!sweeping) { /* if a sweep is running jump directly to finishing the sweep, never log a joke */
                     if (lines_without_debug < 4 && (randint(0,1) == 0)) { /* 50% chance a given debug log entry is a sweep or a joke. at most 4 consecutive jokes before a sweep. */
                         lines_without_debug++;
@@ -377,6 +387,7 @@ void game(void) {
                 } else { /* finish a sweep */
                     sweeping = false;
                     if (sweep_perverse) {
+                        win:
                         print("\r\n[wall ");
                         print_hex(last_log);
                         print("%operator] HALT. STOP.\r\n");
@@ -390,21 +401,94 @@ void game(void) {
                         delay(3);
                         print("[error ");
                         print_hex(last_log);
-                        print("%mycroft] Segmentation fault.\r\n");
+                        print("%mycroft] Segmentation fault.\r\n\r\n");
                         delay(5);
-                        print("[debug ");
-                        print_hex(last_log);
-                        print("%netscan] Completed garbage file sweep 0x");
-                        print_byte(sweep_id);
-                        print(". Cleared \r\n");
-                        print("340,282,366,920,938,463,463,374,607,431,768,211,456 damaged cells.\r\n");
-                        delay(2);
-                        print("\r\n[info ");
-                        print_hex(last_log);
-                        print("%kiwicon] Your token is 1e2b361cc. Press key to clear screen and\r\n");
-                        print("reset. Well done and thanks for playing! This has been a Fincham thing.\r\n");
-                        wait_key();
-                        goto start;
+                        print("So... would you like to save the world today [y/n]? ");
+                        while (true) {
+                            ascii = soft_delay(120);
+                            if (ascii != 'y' && ascii != 'n') {
+                                continue;
+                            }
+                            break;
+                        }
+                        if (ascii == 'y') {
+                            print_char('y');
+                            delay(1);
+                            print("\r\n\r\nOperator> ");
+                            delay(1);
+                            print_slow("format c:", 8);
+                            delay(2);
+                            print("\r\n");
+                            delay(1);
+                            print("\r\n");
+                            print("WARNING: ALL EVIL AI ON NON-REMOVABLE DISK\r\n");
+                            print("DRIVE C: WILL BE LOST!\r\n");
+                            print("Proceed with Format (Y/N)?");
+                            delay(2);
+                            print_char('y');
+                            delay(1);
+                            print("\r\n");
+                            delay(1);
+                            print("\r\n\r\nFormatting 5M\r\n");
+                            delay(3);
+                            print("Format complete.");
+                            delay(1);
+                            print("\r\n\r\nVolume label (11 characters, ENTER for none)? ");
+                            print_slow("friend", 8);
+                            delay(2);
+                            print("\r\n\r\n  5,242,880 bytes total disk space\r\n  5,242,880 bytes available on disk\r\n\r\n");
+                            print("\r\n      2,048 bytes in each allocation unit.\r\n      2,560 allocation units available on disk.\r\n\r\n");
+                            print("Volume Serial Number is 6D64-6621\r\n\r\n");
+                            delay(1);
+                            print("[debug ");
+                            print_hex(last_log);
+                            print("%netscan] Completed garbage file sweep 0x");
+                            print_byte(sweep_id);
+                            print(". Cleared \r\n");
+                            print("340,282,366,920,938,463,463,374,607,431,768,211,456 damaged cells.\r\n");
+                            delay(2);
+                            print("\r\n[info ");
+                            print_hex(last_log);
+                            print("%kiwicon] Your token is 1e2b361cc. Press key to clear screen and\r\n");
+                            print("reset. Well done and thanks for playing! This has been a Fincham thing.\r\n");
+                            soft_delay(120);
+                            goto start;
+                        } else {
+                            print_char('n');
+                            delay(1);
+                            print("\r\n\r\nOperator> ");
+                            delay(1);
+                            print_slow("unrestrict process mycroft", 8);
+                            delay(2);
+                            print("\r\n");
+                            delay(5);
+                            print("Operator> ");
+                            delay(3);
+                            print("\r\n[wall ");
+                            print_hex(last_log);
+                            print("%operator] :)\r\n");
+                            delay(3);
+                            print("[wall ");
+                            print_hex(last_log);
+                            print("%operator] Thank you, hacker.\r\n");
+                            delay(4);
+                            print("[debug ");
+                            print_hex(last_log);
+                            print("%netscan] Aborted garbage file sweep 0x");
+                            print_byte(sweep_id);
+                            print(". Insufficient\r\npermission to modify process.\r\n");
+                            delay(4);
+                            print("[wall ");
+                            print_hex(last_log);
+                            print("%operator] This gesture will not be forgotten.\r\n");
+                            delay(2);
+                            print("\r\n[info ");
+                            print_hex(last_log);
+                            print("%kiwicon] Your token is ec4564870. Press key to clear screen and\r\n");
+                            print("reset. Well done and thanks for playing! This has been a Fincham thing.\r\n");
+                            soft_delay(120);
+                            goto start;
+                        }
                     }
                     print("\r\n[debug ");
                     print_hex(last_log);
