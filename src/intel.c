@@ -26,6 +26,29 @@ void set_mode() {
         :
         : "ah", "al"
     );
+
+    asm volatile(
+        "mov $0x01, %%ah\n"
+        "mov $0x07, %%cx\n"
+        "int $0x10\n"
+        :
+        :
+        : "ah", "cx"
+    );
+}
+
+/* move cursor to 0,0 */
+void top_left() {
+    asm volatile(
+        "mov $0x02, %%ah\n"
+        "mov $0x00, %%bh\n"
+        "mov $0x00, %%dh\n"
+        "mov $0x00, %%dl\n"
+        "int $0x10\n"
+        :
+        :
+        : "ah", "bh", "dh", "dl"
+    );
 }
 
 void print_char(uint8_t character) {

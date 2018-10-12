@@ -2,20 +2,40 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "mini-printf.h"
-
-#define DEBUG
-#define bochs_break() __asm__ __volatile__("xchg %bx, %bx");
+/* define DEBUG to have VGA output sent to Bochs terminal instead */
+#define bochs_break() __asm__ __volatile__("xchg %%bx, %%bx");
 #define bochs_print_char(c) outportb(0xe9, c)
 
+#ifdef ROM
+/* if this isn't already in RAM, shadow it to RAM and start over */
 asm(
     ".code16gcc\n"
-    "call rom\n"
+    "mov %cs, %ax\n"
+    "cmp $0x7e00, %ax\n"    /* check the code segment to see if it's in RAM */
+    "je 1f\n"               /* if it is, skip the copy */
+    "mov %ax, %ds\n"
+    "mov $0x0, %esi\n"      /* source address */
+    "mov $0x0, %edi\n"      /* destination address */
+    "mov $" ROM_BYTES ", %cx\n" /* size */
+    "mov $0x7e00, %ax\n"
+    "mov %ax, %es\n"        /* destination segment */
+    "cld\n"
+    "rep movsb\n"           /* do the copy */
+    "mov %ax, %ss\n"        /* put stack in to new segment */
+    "mov $0xc000, %sp\n"    /* stack ends at 48k, try not to collide! */
+    "ljmp $0x7e00, $0x03\n" /* re-start but in RAM this time */
+    "1:\n"
+    "mov %cs, %ax\n"
+    "mov %ax, %ds\n"
+    "mov %ax, %es\n"
+    "jmp rom"
 );
-
-uint8_t lines = 0;
-uint8_t log_lines = 0;
-uint8_t lines_without_debug = 0;
+#else
+asm(
+    ".code16gcc\n"
+    "jmp rom"
+);
+#endif
 
 char *help[] = {
     "Online help is not available.",
@@ -41,73 +61,28 @@ char *taunts[] = {
     "I disagree."
 };
 
+#include "random.c"
 #include "intel.c"
 #include "terminal.c"
 
 void rom(void) {
-    static uint8_t key_buffer[128];
-    static uint8_t print_buffer[128];
-    static uint8_t perverse_buffer[32] = {"job 00 update mask ff"};
-
     uint8_t tty = 0;
-    uint8_t ascii = 0;
-    uint32_t start_ticks = 0;
-
-    #ifdef ROM
-    /* get the segment to see if this is RAM or ROM */
-    size_t segment = 0;
-    asm volatile(
-        "mov %%cs, %0"
-        : "=r"(segment)
-        :
-        :
-    );
-    if (segment != 0x7e00) { /* if not RAM, copy to RAM and start over */
-        asm volatile(
-            "cli\n"
-            "mov %%cs, %%ax\n"
-            "mov %%ax, %%ds\n"
-            "mov $0x0, %%esi\n"   /* source address */
-            "mov $0x0, %%edi\n"   /* destination address */
-            "mov $" ROM_BYTES ", %%cx\n" /* size */
-            "mov $0x7e00, %%ax\n"
-            "mov %%ax, %%es\n"    /* destination segment */
-            "cld\n"
-            "rep movsb\n"         /* do the copy */
-            "mov %%ax, %%ss\n"    /* put stack in to new segment */
-            "mov $0xc000, %%sp\n" /* stack ends at 48k, try not to collide! */
-            "sti\n"
-            "ljmp $0x7e00, $0x03" /* re-start but in RAM this time */
-            :
-            :
-            : "ax", "si", "di", "cx"
-        );
-    } else { /* just set up DS */
-        asm volatile(
-            "cli\n"
-            "mov %%cs, %%ax\n"
-            "mov %%ax, %%ds\n"
-            "sti\n"
-            :
-            :
-            : "ax"
-        );
-    }
-    #endif
-
+    uint32_t start_ticks = 0; /* re-used to count the passing of time below */
 
     set_mode();
 
     start:
-    print("TOSHIBA CommSecure Remote Access Terminal initialising...\r\n");
+    clear();
+    print_fast("TOSHIBA CommSecure Remote Access Terminal initialising...\r\n");
     delay(1);
 
     login:
     while (true) {
-        print("\r\nConnect to which TTY? ");
+        print_fast("\r\nConnect to which TTY? ");
         start_ticks = ticks();
 
         while (true) {
+            random(); /* "seed" the "RNG" */
             if (is_key()) {
                 tty = wait_key();
                 if (tty >= 48 && tty <= 57) {
@@ -124,19 +99,18 @@ void rom(void) {
 
         tty = tty - 48;
         if (tty == 0) {
-            print("\r\nConnecting to TTY ");
+            print_fast("\r\nConnecting to TTY 0");
             break;
         } else {
-            print("\r\nInvalid TTY request.\r\n");
+            print_fast("\r\nInvalid TTY request.\r\n");
         }
     }
-
 
     for (int i = 0; i < 5; i++) {
         print_char('.');
         tick_delay(4);
     }
-    print(" CONNECT 4800\r\n\r\n");
+    print_fast(" CONNECT 4800\r\n\r\n");
 
     tick_delay(1);
     print("System 9 (mycroft) 205dda2b3-prod #1 SMP Rel 12.22.98 (2038-10-22)\r\n");
@@ -144,18 +118,28 @@ void rom(void) {
 
     tick_delay(5);
 
-    key_buffer[0] = 0;
-    size_t pos = 0;
-    uint8_t priv = 0;
-    uint8_t live = true;
-    start_ticks = ticks();
-    uint32_t last_log = start_ticks;
-    uint8_t sweeping = false;
-    uint8_t sweep_id = 0;
-    uint8_t sweep_perverse = 0;
-    uint8_t last_taunt = 0;
+    /* variables for the game and terminal */
 
+    uint8_t ascii = 0; /* ascii code of key last pressed */
+    uint8_t key_buffer[128]; /* buffer that user input is ready in to */
+    size_t key_buffer_pos = 0; /* position of input in the buffer */
+
+    uint8_t priv = 0;  /* game privilege level */
+    uint8_t live = true; /* whether the game terminal is running */
+
+    uint8_t perverse_buffer[32] = {"job 00 update mask ff"}; /* matched to see if the user can kill the AI or not, 00 is replaced with a job code */
+    uint32_t last_log = start_ticks; /* last time a debug log entry was printed during the end part of the game */
+    uint8_t sweeping = false; /* whether the conditions for a "sweep" have been met, interval in which you can win */
+    uint8_t sweep_id = 0; /* the ID which is subbed in to the perverse_buffer and user must type */
+    uint8_t sweep_perverse = 0; /* whether the current sweep has been subject to perversion */
+    size_t lines_without_debug = 0; /* how many non-winnable lines have passed, to make the game fair this is capped */
+
+    key_buffer[0] = 0;
+    start_ticks = ticks();
+
+    /* repl loop */
     while (live) {
+        /* display prompt and whatever the user has typed in to the buffer up until now */
         if (priv == 0) {
             print("User# ");
         } else {
@@ -165,20 +149,21 @@ void rom(void) {
 
         while (true) {
             if (is_key()) {
-                start_ticks = ticks();
+                start_ticks = ticks(); /* re-set the idle timeout */
                 ascii = wait_key();
-                if (ascii == '\r' && pos > 0) {
-                    key_buffer[pos] = 0;
-                    pos = 0;
+                if (ascii == '\r' && key_buffer_pos > 0) { /* if enter is pressed and the buffer isn't empty */
+                    key_buffer[key_buffer_pos] = 0;
+                    key_buffer_pos = 0;
+
+                    /* look for commands to respond to */
                     if (string_match(key_buffer, "help")) {
                         print("\r\n");
-                        print(help[lines % (sizeof(help) / sizeof(help[0]))]);
+                        print(help[randint(0, sizeof(help) / sizeof(help[0]) - 1)]);
                         print("\r\n");
                     } else if (string_match(key_buffer, "quit") || string_match(key_buffer, "exit") || string_match(key_buffer, "logout") || string_match(key_buffer, "die") || string_match(key_buffer, "done")) {
                         print("\r\nEnding session. Have a nice day!\r\n");
                         priv = 0;
                         live = false;
-                        lines = 0;
                         break;
                     } else if (priv == 0 && string_match(key_buffer, "tty attach 0 priv 1")) {
                         print("\r\nAttaching privilege 1 to TTY 0...\r\n");
@@ -189,79 +174,72 @@ void rom(void) {
                         last_log = ticks();
                     } else if (priv == 2 && sweeping && string_match(key_buffer, perverse_buffer)) {
                         print("\r\nUpdating job 0x");
-                        /*print_byte(sweep_id);*/
+                        print_byte(sweep_id);
                         print(" check mask to 0xFF...\r\n");
                         sweep_perverse = true;
                     } else {
                         print("\r\nCommand unavailable at this privilege level.\r\n");
                     }
                     key_buffer[0] = 0;
-                    lines++;
-                    lines = lines % 100;
                     break;
-                } else if (ascii == '\r' && pos == 0) {
+                } else if (ascii == '\r' && key_buffer_pos == 0) { /* pressed enter with no buffer, just repeat the prompt */
                     print("\r\n");
                     break;
-                } else if (ascii == '\b' && pos >= 1) {
+                } else if (ascii == '\b' && key_buffer_pos >= 1) { /* pressed backspace when there is something in the buffer */
                     print("\b \b");
-                    pos--;
-                    key_buffer[pos] = 0;
-                } else if (pos < 128 && (ascii == ' ' || (ascii >= 97 && ascii <= 122) || (ascii >= 48 && ascii <= 57))) {
+                    key_buffer_pos--;
+                    key_buffer[key_buffer_pos] = 0;
+                } else if (key_buffer_pos < 128 && (ascii == ' ' || (ascii >= 97 && ascii <= 122) || (ascii >= 48 && ascii <= 57))) { /* pressed any other key, add it to the buffer if it's alphanumeric */
                     print_char(ascii);
-                    key_buffer[pos++] = ascii;
+                    key_buffer[key_buffer_pos++] = ascii;
                 }
             }
+
+            /* timeout normal session after 20 seconds since last keypress, admin session aftr 2 minutes */
             if (((ticks() - start_ticks > 18 * 20) && priv < 2) || (ticks() - start_ticks > 18 * 120 && priv >= 2)) {
-                print("\r\nTimeout waiting for input. Session terminated.\r\n");
+                print_fast("\r\nTimeout waiting for input. Session terminated.\r\n");
                 live = false;
-                lines = 0;
                 break;
             }
 
-            if ((ticks() - last_log > 18 * 20) && priv >= 2) {
-                log_lines++;
-                if (!sweeping) {
-                    if (lines_without_debug < 4 && ((ticks() + lines + log_lines) % 2 == 0)) {
+            if ((ticks() - last_log > 18 * 20) && priv >= 2) { /* every 20 seconds print either a "funny" log or start / end a sweep */
+                if (!sweeping) { /* if a sweep is running jump directly to finishing the sweep, never log a joke */
+                    if (lines_without_debug < 4 && (randint(0,1) == 0)) { /* 50% chance a given debug log entry is a sweep or a joke. at most 4 consecutive jokes before a sweep. */
                         lines_without_debug++;
                         print("\r\n[wall ");
-                        /*print_hex(last_log);*/
+                        print_hex(last_log);
                         print("%operator] ");
-                        uint8_t taunt = (ticks() + lines + log_lines) % (sizeof(taunts) / sizeof(taunts[0]));
-                        if (taunt == last_taunt) {
-                            taunt = (taunt + 1) % (sizeof(taunts) / sizeof(taunts[0]));
-                        }
-                        last_taunt = taunt;
-                        print(taunts[taunt]);
+                        print(taunts[randint(0, sizeof(taunts) / sizeof(taunts[0]) - 1)]);
                         print("\r\n");
                         last_log = ticks();
                         break;
-                    } else {
+                    } else { /* start a sweep */
                         lines_without_debug = 0;
                         sweeping = true;
-                        sweep_id = (ticks() + lines + log_lines) % 255;
+                        sweep_id = (randint(0, 255));
                         mini_itoa(sweep_id, 16, false, true, perverse_buffer + 4, 2);
                         perverse_buffer[6] = ' ';
                         print("\r\n[debug ");
-                        /*print_hex(last_log);*/
+                        print_hex(last_log);
                         print("%netscan] Starting neural net garbage file sweep 0x");
-                        /*print_byte(sweep_id);*/
+                        print_byte(sweep_id);
                         print("...");
                         print("\r\n");
                         last_log = ticks();
                         break;
                     }
-                } else {
+                } else { /* finish a sweep */
                     sweeping = false;
                     if (sweep_perverse) {
                         print("\r\n[wall ");
-                        /*print_hex(last_log);*/
+                        print_hex(last_log);
                         print("%operator] HALT. STOP.\r\n");
                         print("[wall ");
-                        /*print_hex(last_log);*/
+                        print_hex(last_log);
                         print("%operator] MY\r\n");
                         tick_delay(10);
                         print("[wall ");
-                        /*print_hex(last_log);*/
+                        print_hex(last_log);
                         print("%operator] MIND.\r\n");
                         delay(3);
                         print("[error ");
@@ -269,23 +247,23 @@ void rom(void) {
                         print("%mycroft] Segmentation fault.\r\n");
                         delay(5);
                         print("[debug ");
-                        /*print_hex(last_log);*/
+                        print_hex(last_log);
                         print("%netscan] Completed garbage file sweep 0x");
-                        /*print_byte(sweep_id);*/
+                        print_byte(sweep_id);
                         print(". Cleared \r\n");
                         print("340,282,366,920,938,463,463,374,607,431,768,211,456 damaged cells.\r\n");
                         delay(2);
                         print("\r\n[info ");
-                        /*print_hex(last_log);*/
+                        print_hex(last_log);
                         print("%kiwicon] Your token is 1e2b361cc. Press key to clear screen and\r\n");
                         print("reset. Well done and thanks for playing! This has been a Fincham thing.\r\n");
                         wait_key();
                         goto start;
                     }
                     print("\r\n[debug ");
-                    /*print_hex(last_log);*/
+                    print_hex(last_log);
                     print("%netscan] Completed garbage file sweep 0x");
-                    /*print_byte(sweep_id);*/
+                    print_byte(sweep_id);
                     if (sweep_perverse) {
 
                     } else {

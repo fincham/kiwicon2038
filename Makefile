@@ -4,7 +4,7 @@
 ROM_BLOCKS := 32
 ROM_BYTES := 0x4000
 
-C_SRC_FILES := src/ai.c src/mini-printf.c
+C_SRC_FILES := src/ai.c
 
 GCC_OPTIONS := -DROM_BYTES=\"$(ROM_BYTES)\" -std=gnu99 -nostdlib -m32 -march=i386 -ffreestanding -fno-pie
 COM_LD_OPTIONS := --nmagic,--script=com.ld
