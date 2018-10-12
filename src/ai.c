@@ -139,7 +139,7 @@ void rom(void) {
     print(" CONNECT 4800\r\n\r\n");
 
     tick_delay(1);
-    print("System 9 (mike) 205dda2b3-prod #1 SMP Rel 12.22.98 (2038-10-22)\r\n");
+    print("System 9 (mycroft) 205dda2b3-prod #1 SMP Rel 12.22.98 (2038-10-22)\r\n");
     print("You have no mail.\r\n\r\n");
 
     tick_delay(5);
@@ -265,8 +265,8 @@ void rom(void) {
                         print("%operator] MIND.\r\n");
                         delay(3);
                         print("[error ");
-                        /*print_hex(last_log);*/
-                        print("%mike] Segmentation fault.\r\n");
+                        print_hex(last_log);
+                        print("%mycroft] Segmentation fault.\r\n");
                         delay(5);
                         print("[debug ");
                         /*print_hex(last_log);*/
