@@ -1,0 +1,123 @@
+/* Intel-specific BIOS stuff */
+
+void outportb(uint16_t port, uint8_t val) {
+    asm volatile(
+        "outb %%al, %%dx"
+        :
+        : "d" (port), "a" (val)
+    );
+}
+
+void outportw(uint16_t port, uint16_t val) {
+    asm volatile(
+        "outw %%ax, %%dx"
+        :
+        : "d" (port), "a" (val)
+    );
+}
+
+void set_mode() {
+    /* sets mods 0x03 which is colour text @ 80x25 */
+    asm volatile(
+        "mov $0x00, %%ah\n"
+        "mov $0x03, %%al\n"
+        "int $0x10\n"
+        :
+        :
+        : "ah", "al"
+    );
+}
+
+void print_char(uint8_t character) {
+    #ifdef DEBUG
+    bochs_print_char(character);
+    #endif
+    asm volatile(
+        "mov $0x0e, %%ah\n"
+        "mov $0x00, %%bh\n"
+        "int $0x10\n"
+        :
+        : "a"(character)
+        : "bh"
+    );
+}
+
+/* return the ASCII code for a key. if no key is in the buffer, block */
+uint8_t wait_key() {
+    uint8_t ascii = 0;
+
+    asm volatile(
+        "mov $0x00, %%ah\n"
+        "int $0x16"
+        : "=a"(ascii)
+        :
+        :
+    );
+
+    return ascii;
+}
+
+/* returns true if there is a key in the buffer */
+uint8_t is_key() {
+    uint8_t flag = 0;
+
+    asm volatile(
+        "mov $0x01, %%ah\n"
+        "int $0x16\n"
+        "sete %0"
+        : "=a"(flag)
+        :
+        :
+    );
+
+    return !flag;
+}
+
+/* get ticks elapsed since midnight */
+uint32_t ticks() {
+    uint16_t low_time = 0;
+    uint16_t high_time = 0;
+    uint16_t midnight = 0;
+
+    asm volatile(
+        "mov $0x00, %%ah\n"
+        "int $0x1a"
+        : "=c"(high_time), "=d"(low_time), "=a"(midnight)
+        :
+        :
+    );
+
+    return (high_time << 16 ) | (low_time & 0xffff);
+}
+
+/* delay for delay_seconds "seconds" */
+void delay(uint8_t delay_seconds) {
+    uint32_t time = ticks();
+    while (ticks() - time < delay_seconds * 18) {
+    }
+}
+
+/* delay for delay_seconds "seconds" */
+uint8_t soft_delay(uint8_t delay_seconds) {
+    uint32_t time = ticks();
+    while (ticks() - time < delay_seconds * 18) {
+        if (is_key()) {
+            wait_key();
+            return true;
+        }
+    }
+    return false;
+}
+
+void tick_delay(uint8_t delay_ticks) {
+    uint32_t time = ticks();
+    while (ticks() - time < delay_ticks) {
+    }
+}
+
+void halt() {
+    asm volatile("cli");
+    while (1) {
+        asm volatile("hlt");
+    }
+}

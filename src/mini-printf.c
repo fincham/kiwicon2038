@@ -42,6 +42,7 @@
  */
 
 #include <stdarg.h>
+#include "mini-printf.h"
 
 static unsigned int
 mini_strlen(const char *s)
@@ -51,7 +52,7 @@ mini_strlen(const char *s)
     return len;
 }
 
-static unsigned int
+unsigned int
 mini_itoa(int value, unsigned int radix, unsigned int uppercase, unsigned int unsig,
      char *buffer, unsigned int zero_pad)
 {
@@ -104,10 +105,8 @@ mini_vsnprintf(char *buffer, unsigned int buffer_len, char *fmt, va_list va)
 
     int _putc(char ch)
     {
-        if ((unsigned int)((pbuffer - buffer) + 1) >= buffer_len) {
-            print("too long\r\n");
+        if ((unsigned int)((pbuffer - buffer) + 1) >= buffer_len)
             return 0;
-        }
         *(pbuffer++) = ch;
         *(pbuffer) = '\0';
         return 1;

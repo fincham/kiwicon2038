@@ -35,6 +35,7 @@
 
 int mini_vsnprintf(char* buffer, unsigned int buffer_len, char *fmt, va_list va);
 int mini_snprintf(char* buffer, unsigned int buffer_len, char *fmt, ...);
+unsigned int mini_itoa(int value, unsigned int radix, unsigned int uppercase, unsigned int unsig, char *buffer, unsigned int zero_pad);
 
 #define vsnprintf mini_vsnprintf
 #define snprintf mini_snprintf

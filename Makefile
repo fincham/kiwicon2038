@@ -1,16 +1,26 @@
-# I don't like Makefiles.
+# option ROMs have a size measured in 512 byte blocks.
+# this ROM almost fits in 16 blocks (8k) with -Os but I'd rather it just be longer
+# and not worry about what weird stuff the compiler is doing
+ROM_BLOCKS := 32
+ROM_BYTES := 0x4000
+
+C_SRC_FILES := src/ai.c src/mini-printf.c
+
+GCC_OPTIONS := -DROM_BYTES=\"$(ROM_BYTES)\" -std=gnu99 -nostdlib -m32 -march=i386 -ffreestanding -fno-pie
+COM_LD_OPTIONS := --nmagic,--script=com.ld
+ROM_LD_OPTIONS := --nmagic,--script=rom.ld
 
 build/chip.rom: romify.py $(shell find -name \*.ld) $(shell find src)
-	gcc -std=gnu99 -Os -nostdlib -m32 -march=i386 -ffreestanding -fno-pie -Wl,--nmagic,--script=com.ld -o build/ai.com src/ai.c
-	gcc -DROM -std=gnu99 -Os -nostdlib -m32 -march=i386 -ffreestanding -fno-pie -Wl,--nmagic,--script=rom.ld -o build/ai.rom src/ai.c
+	gcc $(GCC_OPTIONS) -Wl,$(COM_LD_OPTIONS) $(C_SRC_FILES) -o build/ai.com
+	gcc $(GCC_OPTIONS) -DROM -Wl,$(ROM_LD_OPTIONS) $(C_SRC_FILES) -o build/ai.rom
 	
-	# this ROM fits in 16 blocks (8k) at the moment
-	./romify.py 16 < build/ai.rom > build/padded.rom
+	./romify.py $(ROM_BLOCKS) < build/ai.rom > build/padded.rom
 
-	# for the hacked up 128k ROM used for Kiwicon 2038 the 8k padded ROM needs to be pushed up to 32k inside the "chip image"
+	# for the hacked up 128k ROM used for Kiwicon 2038 the 16k binary needs to be pushed up to 32k inside the "chip image"
 	dd bs=512 count=192 if=/dev/zero > build/chip.rom
 	cat build/padded.rom >> build/chip.rom
-	dd bs=512 count=48 if=/dev/zero >> build/chip.rom
+    # make sure the rest of the file is sufficiently padded with zeroes
+	dd bs=512 count=$$((64 - $(ROM_BLOCKS)))  if=/dev/zero >> build/chip.rom
 
 clean: 
 	find build -type f -delete
