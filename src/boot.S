@@ -33,6 +33,9 @@ mov $0x03, %bx      /* at offset 0x03 (like an option ROM) */
 xor %dh, %dh
 mov $0x0002, %cx    /* skip the MBR when reading from disk */
 int $0x13
+mov $0x7e00, %bx      /* at offset 0x03 (like an option ROM) */
+mov %bx, %ss        /* set up a new stack, because the game won't run its setup code */
+mov $0xc000, %sp
 
 ljmp $0x7e00, $0x03 /* jump to the game */
 
