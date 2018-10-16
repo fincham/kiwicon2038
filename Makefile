@@ -10,7 +10,9 @@ GCC_OPTIONS := -DROM_BYTES=\"$(ROM_BYTES)\" -std=gnu99 -nostdlib -m32 -march=i38
 COM_LD_OPTIONS := --nmagic,--script=com.ld
 ROM_LD_OPTIONS := --nmagic,--script=rom.ld
 
-build/chip.rom: romify.py $(shell find -name \*.ld) $(shell find src)
+all: build/chip.rom build/disk.img
+
+build/chip.rom: romify.py $(shell find -name \*.ld) $(shell find src -not -name \*.S)
 	gcc $(GCC_OPTIONS) -Wl,$(COM_LD_OPTIONS) $(C_SRC_FILES) -o build/ai.com
 	gcc $(GCC_OPTIONS) -DROM -Wl,$(ROM_LD_OPTIONS) $(C_SRC_FILES) -o build/ai.rom
 	
@@ -22,10 +24,21 @@ build/chip.rom: romify.py $(shell find -name \*.ld) $(shell find src)
     # make sure the rest of the file is sufficiently padded with zeroes
 	dd bs=512 count=$$((64 - $(ROM_BLOCKS)))  if=/dev/zero >> build/chip.rom
 
+build/disk.img: build/chip.rom $(shell find src -name \*.S)
+	# build the backup "disk bootable" version
+	as -o build/boot.o src/boot.S
+	ld -Ttext 0x7C00 -o build/boot.elf build/boot.o
+	objcopy -O binary build/boot.elf build/boot.bin
+	cat build/boot.bin build/ai.rom > build/disk.img
+	dd if=/dev/null of=build/disk.img bs=1 count=0 seek=1440k
+
 clean: 
 	find build -type f -delete
 
 emu: build/chip.rom
 	bochs -q -f test/bochsrc -rc test/bochscommands
+
+diskemu: build/disk.img
+	bochs -q -f test/bochsrc-disk -rc test/bochscommands
 
 .PHONY: clean emu
