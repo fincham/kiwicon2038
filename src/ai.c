@@ -102,6 +102,13 @@ uint8_t *process[] = {
     "wopr.out"
 };
 
+uint8_t *files[] = {
+    "core",
+    "passwords",
+    "README.NOW",
+    "secaudit"
+};
+
 #include "random.c"
 #include "intel.c"
 #include "terminal.c"
@@ -241,7 +248,11 @@ void game(void) {
                     } else if (match(key_buffer, "pwd")) {
                         print("\r\n/usr/pak0/technician\r\n");\
                     } else if (match(key_buffer, "ls") || match(key_buffer, "dir")) {
-                        print("\r\ncore  passwords  README.NOW  secaudit\r\n");
+                        print("\r\n");
+                        for (int i = 0; i < sizeof(files)/sizeof(files[0]); i++ ) {
+                          print(files[i]);
+                          print("\r\n");
+                        }
                     } else if (match(key_buffer, "type passwords") || match(key_buffer, "cat passwords")) {
                         print("\r\n*** SECAUDIT EXCEPTION: Rogue access to passwordfile. Session terminated.\r\n");
                         priv = 0;
