@@ -115,6 +115,7 @@ uint8_t *files[] = {
 
 void game(void) {
     uint8_t tty = 0;
+    uint8_t valid_tty = 0;
     uint32_t start_ticks = 0; /* re-used to count the passing of time below */
 
     set_mode();
@@ -125,6 +126,11 @@ void game(void) {
     delay(1);
 
     login:
+    valid_tty = randint(0, 9);
+    #ifdef DEBUG
+    print("DEBUG: Valid TTY is ");
+    print_number(valid_tty);
+    #endif
     while (true) {
         print_fast("\r\nConnect to which TTY? ");
         start_ticks = ticks();
@@ -146,8 +152,9 @@ void game(void) {
         }
 
         tty = tty - 48;
-        if (tty == 0) {
-            print_fast("\r\nConnecting to TTY 0");
+        if (tty == valid_tty) {
+            print_fast("\r\nConnecting to TTY ");
+            print_number(valid_tty);
             break;
         } else {
             print_fast("\r\nInvalid TTY request.\r\n");
@@ -240,8 +247,12 @@ void game(void) {
                             print(" ?        00:00:00 ");
                             print_choice(process);
                         }
-                        print("10678 tty0     00:00:00 ps\r\n");
-                        print("16161 tty0     00:00:01 glitsh\r\n");
+                        print("10678 tty");
+                        print_number(valid_tty);
+                        print("     00:00:00 ps\r\n");
+                        print("16161 tty");
+                        print_number(valid_tty);
+                        print("     00:00:01 glitsh\r\n");
                         start_ticks = ticks();
                     } else if (match(key_buffer, "glitsh")) {
                         print("\r\nglitter shell, version 6.6.12(1)-release (smp-nine-clap)\r\n");
