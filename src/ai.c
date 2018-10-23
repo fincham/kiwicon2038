@@ -102,6 +102,19 @@ uint8_t *process[] = {
     "wopr.out"
 };
 
+uint8_t *ttys[] = {
+    "System 9 (mycroft) 205dda2b3-prod #1 SMP Rel 12.22.98 (2038-10-22)\r\n",
+    "Ubuntu 38.10 Quixotic Quoll 2038-10-30\r\n",
+    "Debian Bonnie 19.0 (2037)\r\n",
+    "RHEL 11.0 GA 2038   \r\n",
+    "tty4 System 9 (mycroft) 205dda2b3-prod #1 SMP Rel 12.22.98 (2038-10-22)\r\n",
+    "tty5 System 9 (mycroft) 205dda2b3-prod #1 SMP Rel 12.22.98 (2038-10-22)\r\n",
+    "tty6 System 9 (mycroft) 205dda2b3-prod #1 SMP Rel 12.22.98 (2038-10-22)\r\n",
+    "tty7 System 9 (mycroft) 205dda2b3-prod #1 SMP Rel 12.22.98 (2038-10-22)\r\n",
+    "tty8 System 9 (mycroft) 205dda2b3-prod #1 SMP Rel 12.22.98 (2038-10-22)\r\n",
+    "tty9 System 9 (mycroft) 205dda2b3-prod #1 SMP Rel 12.22.98 (2038-10-22)\r\n"
+};
+
 #include "random.c"
 #include "intel.c"
 #include "terminal.c"
@@ -139,13 +152,9 @@ void game(void) {
         }
 
         tty = tty - 48;
-        if (tty == 0) {
-            print_fast("\r\nConnecting to TTY ");
-            print_char('0');
-            break;
-        } else {
-            print_fast("\r\nInvalid TTY request.\r\n");
-        }
+        print_fast("\r\nConnecting to TTY ");
+        print_number(tty);
+        break;
     }
 
     for (int i = 0; i < 5; i++) {
@@ -156,7 +165,12 @@ void game(void) {
 
     remote:
     tick_delay(1);
-    print("System 9 (mycroft) 205dda2b3-prod #1 SMP Rel 12.22.98 (2038-10-22)\r\n");
+    print(ttys[tty]);
+    if ( tty != 0 ) {
+      print("Access Denied.");
+      delay(3);
+      goto start;
+    }
     print("You have no mail.\r\n\r\n");
 
     tick_delay(5);
