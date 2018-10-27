@@ -114,7 +114,7 @@ void game(void) {
 
     start:
     clear();
-    print_fast("TOSHIBA ROMSecure Remote Access Terminal initialising...\r\n");
+    print_fast(VENDOR " ROMSecure Remote Access Terminal initialising...\r\n");
     delay(1);
 
     login:
@@ -209,6 +209,14 @@ void game(void) {
                         print("\r\nHue hue hue.\r\n");
                         priv = 0;
                         #endif
+                    } else if (match(key_buffer, "mail")) {
+                        print("\r\nNo mail for ");
+                        if (priv == 0) {
+                            print("User");
+                        } else {
+                            print("so-called Operator");
+                        }
+                        print("\r\n");
                     } else if (match(key_buffer, "quit") || match(key_buffer, "exit") || match(key_buffer, "logout") || match(key_buffer, "die") || match(key_buffer, "done")) {
                         print("\r\nEnding session. Have a nice day!\r\n");
                         priv = 0;
@@ -238,19 +246,53 @@ void game(void) {
                         start_ticks = ticks();
                     } else if (match(key_buffer, "glitsh")) {
                         print("\r\nglitter shell, version 6.6.12(1)-release (smp-nine-clap)\r\n");
+                    } else if (starts(key_buffer, "echo ")) {
+                        print("\r\n");
+                        print(key_buffer+5);
+                        print("\r\n");
                     } else if (match(key_buffer, "pwd")) {
                         print("\r\n/usr/pak0/technician\r\n");\
                     } else if (match(key_buffer, "ls") || match(key_buffer, "dir")) {
                         print("\r\ncore  passwords  README.NOW  secaudit\r\n");
-                    } else if (match(key_buffer, "type passwords") || match(key_buffer, "cat passwords")) {
-                        print("\r\n*** SECAUDIT EXCEPTION: Rogue access to passwordfile. Session terminated.\r\n");
-                        priv = 0;
-                        live = false;
-                        break;
-                    } else if (match(key_buffer, "type secaudit") || match(key_buffer, "cat secaudit")) {
-                        print("\r\nglitsh: cat: 'secaudit' is a binary file and displaying it on this terminal\r\nwould be foolish in the extreme.\r\n");
-                    } else if (starts(key_buffer, "secaudit")) {
+                    } else if (starts(key_buffer, "type ") || starts(key_buffer, "cat ")) {
+                        if (match(key_buffer, "type passwords") || match(key_buffer, "cat passwords")) {
+                            print("\r\n*** SECAUDIT EXCEPTION: Rogue access to passwordfile. Session terminated.\r\n");
+                            priv = 0;
+                            live = false;
+                        } else if (match(key_buffer, "type core") || match(key_buffer, "cat core")) {
+                            print("\r\n");
+                            for (int l = 0; l < 453; l++) {
+                                print_char(randint(32, 254));
+                                if (l % 5 == 0) {
+                                    tick_delay(randint(1,3));
+                                    if (randint(0,5) == 1) {
+                                        print_char(7);
+                                    }
+                                }
+
+                            }
+                            print("\r\n");
+                        } else if (match(key_buffer, "type readme.now") || match(key_buffer, "cat readme.now")) {
+                            print("\r\n");
+                            delay(1);
+                            less("Welcome to your new System 9 installation!\r\n\r\nThis message attempts to describe the most basic initial questions that a\r\nsystem administrator of a System 9 installation might have. You are urged to\r\nsave this message for later reference.\r\n\r\nPLEASE CHANGE THE OPERATOR PASSWORD. The default password is \"friend\", and\r\nevery man and his dog knows that one.\r\n\r\nWe hope you enjoy using System 9 and find it to be of a rigorously high quality.");
+                        } else if (match(key_buffer, "type secaudit") || match(key_buffer, "cat secaudit")) {
+                            print("\r\ncat: 'secaudit' is a binary file and displaying it on this terminal\r\nwould be foolish in the extreme.\r\n");
+                        } else if (match(key_buffer, "cat /proc/cpuinfo")) {
+                            print("\r\nprocessor   : 0\r\n");
+                            print("vendor_id   : PossiblyARMTel\r\n");
+                            print("cpu family  : 6\r\n");
+                            print("model       : 66\r\n");
+                            print("model name  : NestWrangler CPU @ 1.21GW\r\n");
+                            print("\r\n");
+                        } else {
+                            print("\r\ncat: '");
+                            print(key_buffer+4);
+                            print("' doesn't exist.\r\n");
+                        }
+                    } else if (starts(key_buffer, "secaudit") || starts(key_buffer, "./secaudit")) {
                         print("\r\nSECAUDIT 1.1 Free Trial (c) 2038 SecAudit Corporation.\r\nThe premium System 9 security hardening tool!\r\n\r\nConduct thorough system scan [y/N]? ");
+                        clear_input_buffer();
                         ascii = soft_delay(20);
                         if (ascii != 'y') {
                             print_char('n');
@@ -277,14 +319,16 @@ void game(void) {
                             print(" mild threats detected.\r\n\r\n");
                             delay(2);
                             print("Would you like to upgrade to SECAUDIT Pro to find out about\r\nyour mild threats [Y/n]? ");
+                            clear_input_buffer();
                             ascii = soft_delay(20);
                             if (ascii != 'y' && ascii != 13) {
                                 print_char('n');
                                 print("\r\nAre you sure? They're pretty bad threats. Upgrade [Y/n]? ");
+                                clear_input_buffer();
                                 ascii = soft_delay(20);
                                 if (ascii != 'y' && ascii != 13) {
                                     print_char('n');
-                                    print("\r\nWell! Don't say we didn't warn you.\r\n");
+                                    print("\r\nWell! Don't say we didn't warn you, cheapskate.\r\n");
                                 } else {
                                     goto accept;
                                 }
@@ -317,13 +361,6 @@ void game(void) {
                             }
                         }
                         start_ticks = ticks();
-                    } else if (match(key_buffer, "cat /proc/cpuinfo")) {
-                        print("\r\nprocessor   : 0\r\n");
-                        print("vendor_id   : PossiblyARMTel\r\n");
-                        print("cpu family  : 6\r\n");
-                        print("model       : 66\r\n");
-                        print("model name  : NestWrangler CPU @ 1.21GW\r\n");
-                        print("\r\n");
                     } else if (starts(key_buffer, "cd ")) {
                         print("\r\nglitsh: cd: ");
                         print(key_buffer + 3);
@@ -345,6 +382,9 @@ void game(void) {
                     print_fast("\b \b");
                     key_buffer_pos--;
                     key_buffer[key_buffer_pos] = 0;
+                } else if (key_buffer_pos < 128 && (ascii >= 65 && ascii <= 90)) { /* capital letters print as caps but store as lowercase, for laziness */
+                    print_char(ascii);
+                    key_buffer[key_buffer_pos++] = ascii + 32;
                 } else if (key_buffer_pos < 128 && (ascii == '/' || ascii == '.' || ascii == ' ' || (ascii >= 97 && ascii <= 122) || (ascii >= 48 && ascii <= 57))) { /* pressed any other key, add it to the buffer if it's alphanumeric */
                     print_char(ascii);
                     key_buffer[key_buffer_pos++] = ascii;
@@ -404,6 +444,7 @@ void game(void) {
                         print("%mycroft] Segmentation fault.\r\n\r\n");
                         delay(5);
                         print("So... would you like to save the world today [y/n]? ");
+                        clear_input_buffer();
                         while (true) {
                             ascii = soft_delay(120);
                             if (ascii != 'y' && ascii != 'n') {
@@ -434,6 +475,7 @@ void game(void) {
                             print("Format complete.");
                             delay(1);
                             print("\r\n\r\nVolume label (11 characters, ENTER for none)? ");
+                            delay(1);
                             print_slow("friend", 8);
                             delay(2);
                             print("\r\n\r\n  5,242,880 bytes total disk space\r\n  5,242,880 bytes available on disk\r\n\r\n");
@@ -449,9 +491,10 @@ void game(void) {
                             delay(2);
                             print("\r\n[info ");
                             print_hex(last_log);
-                            print("%kiwicon] Your token is 1e2b361cc. Press key to clear screen and\r\n");
-                            print("reset. Well done and thanks for playing! This has been a Fincham thing.\r\n");
-                            soft_delay(120);
+                            print("%kiwicon] Your token is 1e2b361cc. Press enter to clear screen\r\n");
+                            print("and reset. Well done and thanks for playing! This game was a fincham thing.\r\n");
+                            clear_input_buffer();
+                            soft_delay_key(120, 13);
                             goto start;
                         } else {
                             print_char('n');
@@ -484,9 +527,10 @@ void game(void) {
                             delay(2);
                             print("\r\n[info ");
                             print_hex(last_log);
-                            print("%kiwicon] Your token is ec4564870. Press key to clear screen and\r\n");
-                            print("reset. Well done and thanks for playing! This has been a Fincham thing.\r\n");
-                            soft_delay(120);
+                            print("%kiwicon] Your token is ec4564870. Press enter to clear screen\r\n");
+                            print("and reset. Well done and thanks for playing! This game was a fincham thing.\r\n");
+                            clear_input_buffer();
+                            soft_delay_key(120, 13);
                             goto start;
                         }
                     }

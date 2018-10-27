@@ -113,32 +113,6 @@ uint32_t ticks() {
     return (high_time << 16 ) | (low_time & 0xffff);
 }
 
-/* delay for delay_seconds "seconds" */
-void delay(uint8_t delay_seconds) {
-    uint32_t time = ticks();
-    while (ticks() - time < delay_seconds * 18) {
-    }
-}
-
-/* delay for delay_seconds "seconds" */
-uint8_t soft_delay(uint8_t delay_seconds) {
-    uint32_t time = ticks();
-    uint8_t ascii = 0;
-    while (ticks() - time < delay_seconds * 18) {
-        if (is_key()) {
-            ascii = wait_key();
-            return ascii;
-        }
-    }
-    return 0;
-}
-
-void tick_delay(uint8_t delay_ticks) {
-    uint32_t time = ticks();
-    while (ticks() - time < delay_ticks) {
-    }
-}
-
 void halt() {
     asm volatile("cli");
     while (1) {

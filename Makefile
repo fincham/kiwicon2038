@@ -6,7 +6,7 @@ ROM_BYTES := 0x4000
 
 C_SRC_FILES := src/ai.c
 
-GCC_OPTIONS := -DROM_BYTES=\"$(ROM_BYTES)\" -std=gnu99 -nostdlib -m32 -march=i386 -ffreestanding -fno-pie
+GCC_OPTIONS := -DVENDOR=\"Toshiba\" -DROM_BYTES=\"$(ROM_BYTES)\" -std=gnu99 -nostdlib -m32 -march=i386 -ffreestanding -fno-pie
 COM_LD_OPTIONS := --nmagic,--script=com.ld
 ROM_LD_OPTIONS := --nmagic,--script=rom.ld
 

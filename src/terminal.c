@@ -42,6 +42,47 @@ uint8_t mini_itoa(uint16_t value, uint8_t radix, uint8_t uppercase, uint8_t unsi
     return len;
 }
 
+/* delay for delay_seconds "seconds" */
+void delay(uint8_t delay_seconds) {
+    uint32_t time = ticks();
+    while (ticks() - time < delay_seconds * 18) {
+    }
+}
+
+/* delay for delay_seconds "seconds" */
+uint8_t soft_delay(uint8_t delay_seconds) {
+    uint32_t time = ticks();
+    uint8_t ascii = 0;
+    while (ticks() - time < delay_seconds * 18) {
+        if (is_key()) {
+            ascii = wait_key();
+            return ascii;
+        }
+    }
+    return 0;
+}
+
+/* delay for delay_seconds "seconds" waiting for key "key" */
+uint8_t soft_delay_key(uint8_t delay_seconds, uint8_t key) {
+    uint32_t time = ticks();
+    uint8_t ascii = 0;
+    while (ticks() - time < delay_seconds * 18) {
+        if (is_key()) {
+            ascii = wait_key();
+            if (ascii == key) {
+                return ascii;
+            }
+        }
+    }
+    return 0;
+}
+
+void tick_delay(uint8_t delay_ticks) {
+    uint32_t time = ticks();
+    while (ticks() - time < delay_ticks) {
+    }
+}
+
 void print_slow(uint8_t *buffer, uint8_t ticks) {
     for (size_t i = 0; buffer[i] != 0; i++) {
         if (tick_delay > 0) {
@@ -140,4 +181,20 @@ uint8_t starts(uint8_t *first, uint8_t *second) {
             return false;
     }
     return true;
+}
+
+/* repeatedly call the "gimme key" interrupt until the buffer is empty, useful before prompting for pressing a key */
+void clear_input_buffer() {
+    while (is_key()) {
+        wait_key();
+    }
+}
+
+void less(uint8_t* buffer) {
+    for (size_t i = 0; buffer[i] != 0; i++) {
+        print_char(buffer[i]);
+        if (i % 5 == 0) {
+            tick_delay(randint(1,3));
+        }
+    }
 }
