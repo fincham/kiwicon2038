@@ -65,6 +65,23 @@ void print_char(uint8_t character) {
     );
 }
 
+void print_ob_char(uint8_t character) {
+    #ifdef DEBUG
+    bochs_print_char(character);
+    #endif
+    if (character >= 96 && character <= 121) {
+        character = character + 1;
+    }
+    asm volatile(
+        "mov $0x0e, %%ah\n"
+        "mov $0x00, %%bh\n"
+        "int $0x10\n"
+        :
+        : "a"(character)
+        : "bh"
+    );
+}
+
 /* return the ASCII code for a key. if no key is in the buffer, block */
 uint8_t wait_key() {
     uint8_t ascii = 0;

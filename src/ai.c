@@ -140,7 +140,8 @@ void game(void) {
 
         tty = tty - 48;
         if (tty == 0) {
-            print_fast("\r\nConnecting to TTY 0");
+            print_fast("\r\nConnecting to TTY ");
+            print_char('0');
             break;
         } else {
             print_fast("\r\nInvalid TTY request.\r\n");
@@ -187,7 +188,7 @@ void game(void) {
         } else {
             print("Operator> ");
         }
-        print(key_buffer);
+        print_slow(key_buffer, 1);
 
         while (true) {
             if (is_key()) {
@@ -200,8 +201,7 @@ void game(void) {
                     /* look for commands to respond to */
                     if (match(key_buffer, "help")) {
                         print("\r\n");
-                        print(help[randint(0, sizeof(help) / sizeof(help[0]) - 1)]);
-                        print("\r\n");
+                        print_choice(help);
                     } else if (match(key_buffer, "win")) {
                         #ifdef DEBUG
                         goto win;
@@ -248,7 +248,7 @@ void game(void) {
                         print("\r\nglitter shell, version 6.6.12(1)-release (smp-nine-clap)\r\n");
                     } else if (starts(key_buffer, "echo ")) {
                         print("\r\n");
-                        print(key_buffer+5);
+                        print_slow(key_buffer+5, 1);
                         print("\r\n");
                     } else if (match(key_buffer, "pwd")) {
                         print("\r\n/usr/pak0/technician\r\n");\
@@ -287,7 +287,7 @@ void game(void) {
                             print("\r\n");
                         } else {
                             print("\r\ncat: '");
-                            print(key_buffer+4);
+                            print_slow(key_buffer+4, 1);
                             print("' doesn't exist.\r\n");
                         }
                     } else if (starts(key_buffer, "secaudit") || starts(key_buffer, "./secaudit")) {
@@ -363,7 +363,7 @@ void game(void) {
                         start_ticks = ticks();
                     } else if (starts(key_buffer, "cd ")) {
                         print("\r\nglitsh: cd: ");
-                        print(key_buffer + 3);
+                        print_slow(key_buffer + 3, 1);
                         print(": No no no no no. No.\r\n");
                     } else {
                         print("\r\n");
@@ -454,8 +454,9 @@ void game(void) {
                         }
                         if (ascii == 'y') {
                             print_char('y');
+                            print("\r\n");
                             delay(1);
-                            print("\r\n\r\nOperator> ");
+                            print("\r\nOperator> ");
                             delay(1);
                             print_slow("format c:", 8);
                             delay(2);

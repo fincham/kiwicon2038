@@ -83,6 +83,15 @@ void tick_delay(uint8_t delay_ticks) {
     }
 }
 
+void print_ob_slow(uint8_t *buffer, uint8_t ticks) {
+    for (size_t i = 0; buffer[i] != 0; i++) {
+        if (tick_delay > 0) {
+            tick_delay(ticks);
+        }
+        print_ob_char(buffer[i]);
+    }
+}
+
 void print_slow(uint8_t *buffer, uint8_t ticks) {
     for (size_t i = 0; buffer[i] != 0; i++) {
         if (tick_delay > 0) {
@@ -98,9 +107,9 @@ void print_fast(uint8_t *buffer) {
 
 void print(uint8_t *buffer) {
     #ifdef DEBUG
-    print_slow(buffer, 0);
+    print_ob_slow(buffer, 0);
     #else
-    print_slow(buffer, 1);
+    print_ob_slow(buffer, 1);
     #endif
 }
 
