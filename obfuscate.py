@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 
+"""
+Yes I know this is the worst C obfuscator ever written. It's just for fun!
+"""
+
 import re
 import sys
 

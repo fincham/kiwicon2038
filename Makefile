@@ -21,7 +21,7 @@ build/chip.rom: romify.py $(shell find -name \*.ld) $(shell find src -not -name 
 	# for the hacked up 128k ROM used for Kiwicon 2038 the 16k binary needs to be pushed up to 32k inside the "chip image"
 	dd bs=512 count=192 if=/dev/zero > build/chip.rom
 	cat build/padded.rom >> build/chip.rom
-    # make sure the rest of the file is sufficiently padded with zeroes
+	# make sure the rest of the file is sufficiently padded with zeroes
 	dd bs=512 count=$$((64 - $(ROM_BLOCKS)))  if=/dev/zero >> build/chip.rom
 
 build/disk.img: build/chip.rom $(shell find src -name \*.S)
