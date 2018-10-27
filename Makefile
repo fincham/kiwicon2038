@@ -13,6 +13,7 @@ ROM_LD_OPTIONS := --nmagic,--script=rom.ld
 all: build/chip.rom build/disk.img
 
 build/chip.rom: romify.py $(shell find -name \*.ld) $(shell find src -not -name \*.S)
+	mkdir -p build
 	gcc $(GCC_OPTIONS) -Wl,$(COM_LD_OPTIONS) $(C_SRC_FILES) -o build/ai.com
 	gcc $(GCC_OPTIONS) -DROM -Wl,$(ROM_LD_OPTIONS) $(C_SRC_FILES) -o build/ai.rom
 	
