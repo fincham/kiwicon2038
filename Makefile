@@ -4,7 +4,7 @@
 ROM_BLOCKS := 32
 ROM_BYTES := 0x4000
 
-GCC_OPTIONS := -DVENDOR=\"Toshiba\" -DROM_BYTES=\"$(ROM_BYTES)\" -std=gnu99 -nostdlib -m32 -march=i386 -ffreestanding -fno-pie
+GCC_OPTIONS := -O0 -DVENDOR=\"Toshiba\" -DROM_BYTES=\"$(ROM_BYTES)\" -std=gnu99 -nostdlib -m32 -march=i386 -ffreestanding -fno-pie
 COM_LD_OPTIONS := --nmagic,--script=com.ld
 ROM_LD_OPTIONS := --nmagic,--script=rom.ld
 
@@ -12,9 +12,8 @@ all: build/chip.rom build/disk.img
 
 build/chip.rom: romify.py $(shell find -name \*.ld) $(shell find src -not -name \*.S)
 	mkdir -p build
-	./obfuscate.py < src/ai.c > src/ai_obfuscated.c
-	gcc $(GCC_OPTIONS) -Wl,$(COM_LD_OPTIONS) src/ai_obfuscated.c -o build/ai.com
-	gcc $(GCC_OPTIONS) -DROM -Wl,$(ROM_LD_OPTIONS) src/ai_obfuscated.c -o build/ai.rom
+	gcc $(GCC_OPTIONS) -Wl,$(COM_LD_OPTIONS) src/ai.c -o build/ai.com
+	gcc $(GCC_OPTIONS) -DROM -Wl,$(ROM_LD_OPTIONS) src/ai.c -o build/ai.rom
 
 	./romify.py $(ROM_BLOCKS) < build/ai.rom > build/padded.rom
 
